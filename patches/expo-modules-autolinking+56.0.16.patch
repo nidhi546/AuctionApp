@@ -1,0 +1,117 @@
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/AutolinkingCommandBuilder.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/AutolinkingCommandBuilder.kt
+index 5368156..5a16be6 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/AutolinkingCommandBuilder.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-plugin-shared/src/main/kotlin/expo/modules/plugin/AutolinkingCommandBuilder.kt
+@@ -3,12 +3,12 @@ package expo.modules.plugin
+ /**
+  * Builder for creating command to run using `expo-modules-autolinking`.
+  */
+-class AutolinkingCommandBuilder {
++class AutolinkingCommandBuilder(nodeExecutable: String = "node") {
+   /**
+    * Command for finding and running `expo-modules-autolinking`.
+    */
+   private val baseCommand = listOf(
+-    "node",
++    nodeExecutable,
+     "--no-warnings",
+     "--eval",
+     "require('expo/bin/autolinking')",
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsExtension.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsExtension.kt
+index 04601c1..5ec7278 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsExtension.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsExtension.kt
+@@ -1,5 +1,6 @@
+ package expo.modules.plugin
+ 
++import expo.modules.plugin.gradle.loadLocalProperties
+ import org.gradle.api.Action
+ import org.gradle.api.initialization.Settings
+ import org.gradle.api.initialization.dsl.VersionCatalogBuilder
+@@ -11,6 +12,10 @@ open class ExpoAutolinkingSettingsExtension(
+   val settings: Settings,
+   @Inject val objects: ObjectFactory
+ ) {
++  private val nodeExecutable: String by lazy {
++    settings.loadLocalProperties().getProperty("node.path", "node")
++  }
++
+   /**
+    * The root directory of the react native project.
+    * Should be used by projects that don't follow the /android folder structure.
+@@ -23,7 +28,7 @@ open class ExpoAutolinkingSettingsExtension(
+    * Command that should be provided to `react-native` to resolve the configuration.
+    */
+   val rnConfigCommand by lazy {
+-    val commandBuilder = AutolinkingCommandBuilder()
++    val commandBuilder = AutolinkingCommandBuilder(nodeExecutable)
+       .command("react-native-config")
+       .useJson()
+ 
+@@ -52,7 +57,7 @@ open class ExpoAutolinkingSettingsExtension(
+     File(
+       settings.providers.exec { env ->
+         env.workingDir(projectRoot)
+-        env.commandLine("node", "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })")
++        env.commandLine(nodeExecutable, "--print", "require.resolve('@react-native/gradle-plugin/package.json', { paths: [require.resolve('react-native/package.json')] })")
+       }.standardOutput.asText.get().trim(),
+     ).parentFile
+   }
+@@ -64,7 +69,7 @@ open class ExpoAutolinkingSettingsExtension(
+     File(
+       settings.providers.exec { env ->
+         env.workingDir(projectRoot)
+-        env.commandLine("node", "--print", "require.resolve('react-native/package.json')")
++        env.commandLine(nodeExecutable, "--print", "require.resolve('react-native/package.json')")
+       }.standardOutput.asText.get().trim(),
+     ).parentFile
+   }
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsPlugin.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsPlugin.kt
+index d66e371..a9e9163 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsPlugin.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/ExpoAutolinkingSettingsPlugin.kt
+@@ -48,10 +48,11 @@ open class ExpoAutolinkingSettingsPlugin : Plugin<Settings> {
+   }
+ 
+   private fun getExpoGradlePluginsFile(settings: Settings): File {
++    val nodeExecutable = settings.loadLocalProperties().getProperty("node.path", "node")
+     val expoModulesAutolinkingPath =
+       settings.providers.exec { env ->
+         env.workingDir(settings.rootDir)
+-        env.commandLine("node", "--print", "require.resolve('expo-modules-autolinking/package.json', { paths: [require.resolve('expo/package.json')] })")
++        env.commandLine(nodeExecutable, "--print", "require.resolve('expo-modules-autolinking/package.json', { paths: [require.resolve('expo/package.json')] })")
+       }.standardOutput.asText.get().trim()
+ 
+     val expoAutolinkingDir = File(expoModulesAutolinkingPath).parentFile
+diff --git a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/SettingsManager.kt b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/SettingsManager.kt
+index 98ee3dd..f88b20c 100644
+--- a/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/SettingsManager.kt
++++ b/node_modules/expo-modules-autolinking/android/expo-gradle-plugin/expo-autolinking-settings-plugin/src/main/kotlin/expo/modules/plugin/SettingsManager.kt
+@@ -13,6 +13,7 @@ import expo.modules.plugin.gradle.linkLocalMavenRepository
+ import expo.modules.plugin.gradle.linkMavenRepository
+ import expo.modules.plugin.gradle.linkPlugin
+ import expo.modules.plugin.gradle.linkProject
++import expo.modules.plugin.gradle.loadLocalProperties
+ import expo.modules.plugin.text.Colors
+ import expo.modules.plugin.text.Emojis
+ import expo.modules.plugin.text.withColor
+@@ -35,6 +36,10 @@ class SettingsManager(
+     exclude
+   )
+ 
++  private val nodeExecutable: String by lazy {
++    settings.loadLocalProperties().getProperty("node.path", "node")
++  }
++
+   private val groovyShell by lazy {
+     val binding = Binding()
+     binding.setVariable("providers", settings.providers)
+@@ -49,7 +54,7 @@ class SettingsManager(
+    * Resolved configuration from `expo-modules-autolinking`.
+    */
+   private val config by lazy {
+-    val command = AutolinkingCommandBuilder()
++    val command = AutolinkingCommandBuilder(nodeExecutable)
+       .command("resolve")
+       .useJson()
+       .useAutolinkingOptions(autolinkingOptions)
