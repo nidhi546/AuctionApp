@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, StatusBar } from 'react-native';
+import React, { useEffect } from "react";
+import { View, Image, StyleSheet, StatusBar } from "react-native";
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -18,7 +18,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     <View style={styles.container}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
       <Image
-        source={require('../../assets/applogo.png')}
+        source={require("../../assets/applogo.png")}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -29,9 +29,9 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
   },
   logo: {
     width: 220,
